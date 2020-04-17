@@ -13,7 +13,7 @@ from FCN.scheduler.scheduler import WarmUpLR, ConstantLR, PolynomialLR
 
 
 
-logger = logging.getLogger("ptsemseg")
+logger = logging.getLogger("FCN")
 
 
 
@@ -33,8 +33,7 @@ key2scheduler = {
 
 
 
-
-def get_scheduler(optimizer, scheduler_dict):
+def get_scheduler(optimizer, scheduler_dict):    # lr_scheduler in config must contain "name":type and other param if not null
 
     if scheduler_dict is None:
 
@@ -43,20 +42,18 @@ def get_scheduler(optimizer, scheduler_dict):
         return ConstantLR(optimizer)
 
 
-
     s_type = scheduler_dict["name"]
-
+    
     scheduler_dict.pop("name")
-
-
-
-    logging.info("Using {} scheduler with {} params".format(s_type, scheduler_dict))
+    
+        
+    logger.info("Using {} scheduler with {} params".format(s_type, scheduler_dist))
 
 
 
     warmup_dict = {}
 
-    if "warmup_iters" in scheduler_dict:
+    if "warmup_iters" in key2scheduler:
 
         ## implement here!?
         # This can be done in a more pythonic way...
@@ -96,8 +93,5 @@ def get_scheduler(optimizer, scheduler_dict):
 
 
     return key2scheduler[s_type](optimizer, **scheduler_dict)
-
-
-
 
 
