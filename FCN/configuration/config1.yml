@@ -21,6 +21,8 @@ data:
 
 training:
 
+  augmentations: 'brightness'
+  
   train_iters: 300000
 
   batch_size: 1
