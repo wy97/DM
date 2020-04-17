@@ -6,7 +6,7 @@ data:
 
   dataset: pascal
 
-  train_split: train
+  train_split: train_aug
 
   val_split: val
 
