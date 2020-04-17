@@ -4,11 +4,11 @@
 # In[1]:
 
 
-import pip
+# import pip
 
-package_names = ['imageio']
+# package_names = ['imageio']
 
-python -m pip.main(['install'] + package_names + ['--upgrade'])
+# python -m pip.main(['install'] + package_names + ['--upgrade'])
 
 
 # In[2]:
