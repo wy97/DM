@@ -7,7 +7,7 @@ data:
   dataset: pascal
 
   train_split: train_aug
-
+  
   val_split: val
 
   img_rows: 'same'
@@ -21,7 +21,7 @@ data:
 
 training:
 
-  augmentations: 'brightness'
+  augmentations: {"gamma": AdjustGamma,"hue": AdjustHue,"brightness": AdjustBrightness}
   
   train_iters: 300000
 
@@ -49,6 +49,6 @@ training:
 
     size_average: False
 
-  lr_schedule:
+  lr_schedule: {"name":"poly_lr","gamma":0.9,"max_iter":10000}
 
-  resume: fcn8s_pascal_best_model.pkl
+  resume: C:/20SP/data mining/Project/ckpt/fcn8s_best_model.pkl
