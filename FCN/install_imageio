@@ -1,2 +1,4 @@
 # run in cmd under python env
 pip install imageio
+
+pip install tensorboardX
