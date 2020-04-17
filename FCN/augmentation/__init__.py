@@ -81,7 +81,7 @@ key2aug = {
 
 
 
-def get_composed_augmentations(aug_dict):
+def get_composed_augmentations(aug_dict):    # associated with augmentations as {"gamma":AdjustGamma,...} in config
 
     if aug_dict is None:
 
