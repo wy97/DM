@@ -3,9 +3,10 @@
 
 # In[ ]:
 
+
 import logging
 
-from FCN.augmentation.aug import (
+from DM.FCN.augmentation.aug import (
 
     AdjustContrast,
 
@@ -40,9 +41,7 @@ from FCN.augmentation.aug import (
 )
 
 
-
 logger = logging.getLogger("FCN")
-
 
 
 key2aug = {
@@ -78,18 +77,13 @@ key2aug = {
 }
 
 
-
-
-
-def get_composed_augmentations(aug_dict):    # associated with augmentations as {"gamma":AdjustGamma,...} in config
+def get_composed_augmentations(aug_dict):
 
     if aug_dict is None:
 
         logger.info("Using No Augmentations")
 
         return None
-
-
 
     augmentations = []
 
@@ -100,6 +94,4 @@ def get_composed_augmentations(aug_dict):    # associated with augmentations as 
         logger.info("Using {} aug with params {}".format(aug_key, aug_param))
 
     return Compose(augmentations)
-
-
 
