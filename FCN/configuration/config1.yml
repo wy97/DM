@@ -7,12 +7,12 @@ data:
   dataset: pascal
 
   train_split: train_aug
-  
+
   val_split: val
 
-  img_rows: 'same'
+  img_rows: 512
 
-  img_cols: 'same'
+  img_cols: 1024
 
   path: C:/20SP/data mining/Project/VOC2012/VOCtrainval_11-May-2012/VOCdevkit/VOC2012
 
@@ -21,8 +21,8 @@ data:
 
 training:
 
-  augmentations: 
-    
+  augmentations:
+
     gamma: 0.9
 
   train_iters: 300000
@@ -39,7 +39,7 @@ training:
 
     name: 'sgd'
 
-    lr: 1.0e-10
+    lr: 1.0e-7
 
     weight_decay: 0.0005
 
@@ -51,12 +51,12 @@ training:
 
     size_average: False
 
-  lr_schedule: 
-    
+  lr_schedule:
+
     name: 'poly_lr'
 
     gamma: 0.9
 
     max_iter: 10000
 
-  resume: 
+  resume:
