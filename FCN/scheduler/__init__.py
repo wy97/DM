@@ -5,17 +5,11 @@
 
 import logging
 
-
 from torch.optim.lr_scheduler import MultiStepLR, ExponentialLR, CosineAnnealingLR
 
-
-from FCN.scheduler.scheduler import WarmUpLR, ConstantLR, PolynomialLR
-
-
+from DM.FCN.scheduler.scheduler import WarmUpLR, ConstantLR, PolynomialLR
 
 logger = logging.getLogger("FCN")
-
-
 
 key2scheduler = {
 
@@ -32,29 +26,23 @@ key2scheduler = {
 }
 
 
-
-def get_scheduler(optimizer, scheduler_dict):    # lr_scheduler in config must contain "name":type and other param if not null
+def get_scheduler(optimizer,
+                  scheduler_dict):  # lr_scheduler in config must contain "name":type and other param if not null
 
     if scheduler_dict is None:
-
         logger.info("Using No LR Scheduling")
 
         return ConstantLR(optimizer)
 
-
     s_type = scheduler_dict["name"]
-    
+
     scheduler_dict.pop("name")
-    
-        
-    logger.info("Using {} scheduler with {} params".format(s_type, scheduler_dist))
 
-
+    logger.info("Using {} scheduler with {} params".format(s_type, scheduler_dict))
 
     warmup_dict = {}
 
     if "warmup_iters" in key2scheduler:
-
         ## implement here!?
         # This can be done in a more pythonic way...
 
@@ -63,8 +51,6 @@ def get_scheduler(optimizer, scheduler_dict):    # lr_scheduler in config must c
         warmup_dict["mode"] = scheduler_dict.get("warmup_mode", "linear")
 
         warmup_dict["gamma"] = scheduler_dict.get("warmup_factor", 0.2)
-
-
 
         logger.info(
 
@@ -76,21 +62,15 @@ def get_scheduler(optimizer, scheduler_dict):    # lr_scheduler in config must c
 
         )
 
-
-
         scheduler_dict.pop("warmup_iters", None)
 
         scheduler_dict.pop("warmup_mode", None)
 
         scheduler_dict.pop("warmup_factor", None)
 
-
-
         base_scheduler = key2scheduler[s_type](optimizer, **scheduler_dict)
 
         return WarmUpLR(optimizer, base_scheduler, **warmup_dict)
-
-
 
     return key2scheduler[s_type](optimizer, **scheduler_dict)
 
