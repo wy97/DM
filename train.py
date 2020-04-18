@@ -463,6 +463,7 @@ if __name__ == "__main__":
     run_id = random.randint(1, 100000)
 
     logdir = os.path.join("runs", os.path.basename(args.config)[:-4], str(run_id))  #e.g. runs/config1
+    # full directory required if run in python instead of notebook
 
     writer = SummaryWriter(log_dir=logdir)
 
