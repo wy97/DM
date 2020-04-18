@@ -21,8 +21,10 @@ data:
 
 training:
 
-  augmentations: {"gamma": AdjustGamma,"hue": AdjustHue,"brightness": AdjustBrightness}
-  
+  augmentations: 
+    
+    gamma: 0.9
+
   train_iters: 300000
 
   batch_size: 1
@@ -49,6 +51,12 @@ training:
 
     size_average: False
 
-  lr_schedule: {"name":"poly_lr","gamma":0.9,"max_iter":10000}
+  lr_schedule: 
+    
+    name: 'poly_lr'
 
-  resume: C:/20SP/data mining/Project/ckpt/fcn8s_best_model.pkl
+    gamma: 0.9
+
+    max_iter: 10000
+
+  resume: 
