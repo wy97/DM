@@ -10,53 +10,40 @@ data:
 
   val_split: val
 
-  img_rows: 512
+  img_rows: 'same'
 
-  img_cols: 1024
+  img_cols: 'same'
 
   path: C:/20SP/data mining/Project/VOC2012/VOCtrainval_11-May-2012/VOCdevkit/VOC2012
 
-  sdb_path: C:/20SP/data mining/Project/benchmark/benchmark_RELEASE
+  sbd_path: C:/20SP/data mining/Project/benchmark/benchmark_RELEASE
 
 
 training:
 
-  augmentations:
-
-    gamma: 0.9
-
-  train_iters: 300000
+  train_iters: 10000
 
   batch_size: 1
 
   val_interval: 1000
 
-  n_workers: 16
+  n_workers: 4
 
-  print_interval: 50
+  print_interval: 100
 
   optimizer:
 
     name: 'sgd'
 
-    lr: 1.0e-7
-
-    weight_decay: 0.0005
-
-    momentum: 0.99
+    lr: 1.0e-5
 
   loss:
 
     name: 'cross_entropy'
 
-    size_average: False
+    size_average: True
 
   lr_schedule:
 
-    name: 'poly_lr'
-
-    gamma: 0.9
-
-    max_iter: 10000
-
   resume:
+
