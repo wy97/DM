@@ -1,26 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[3]:
-
-
-pip install tensorboardX
-
-
-# In[ ]:
-
-
-#import pip
-
-#package_names = ['tensorboardX']
-
-#python -m pip.main(['install'] + package_names + ['--upgrade'])
-
-# only in python env
-
-
-# In[8]:
-
+# In[79]:
 
 import os
 
@@ -38,60 +19,48 @@ import argparse
 
 import numpy as np
 
-
+from torch.autograd import Variable ##
 
 from torch.utils import data
 
 from tqdm import tqdm
 
+from DM.FCN.model import get_model
 
+from DM.FCN.loss import get_loss_function
 
-from FCN.model import get_model
+from DM.FCN.loader.loader import pascalVOCLoader  # no need for get_loader() here
 
-from FCN.loss import get_loss_function
+from DM.FCN.utils import get_logger
 
-from FCN.loader.loader import pascalVOCLoader   # no need for get_loader() here
+from DM.FCN.metric import runningScore, averageMeter
 
-from FCN.utils import get_logger
+from DM.FCN.augmentation import get_composed_augmentations
 
-from FCN.metric import runningScore, averageMeter
+from DM.FCN.scheduler import get_scheduler
 
-from FCN.augmentation import get_composed_augmentations
-
-from FCN.scheduler import get_scheduler
-
-from FCN.optimizer import get_optimizer
-
-
+from DM.FCN.optimizer import get_optimizer
 
 from tensorboardX import SummaryWriter
 
 
-
-# In[21]:
+# In[84]:
 
 
 def train(cfg, writer, logger):
-
-
-
     # Setup seeds
 
-    torch.manual_seed(cfg.get("seed", 1337))
+    torch.manual_seed(cfg.get("seed", 1248))
 
-    torch.cuda.manual_seed(cfg.get("seed", 1337))
+    torch.cuda.manual_seed(cfg.get("seed", 1248))
 
-    np.random.seed(cfg.get("seed", 1337))
+    np.random.seed(cfg.get("seed", 1248))
 
-    random.seed(cfg.get("seed", 1337))
-
-
+    random.seed(cfg.get("seed", 1248))
 
     # Setup device
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
 
     # Setup Augmentations
 
@@ -99,16 +68,12 @@ def train(cfg, writer, logger):
 
     data_aug = get_composed_augmentations(augmentations)
 
-
-
     # Setup Dataloader
 
     data_loader = pascalVOCLoader
     # data_loader = get_loader(cfg["data"]["dataset"])
 
     data_path = cfg["data"]["path"]
-
-
 
     t_loader = data_loader(
 
@@ -124,8 +89,6 @@ def train(cfg, writer, logger):
 
     )
 
-
-
     v_loader = data_loader(
 
         data_path,
@@ -138,47 +101,20 @@ def train(cfg, writer, logger):
 
     )
 
-
-
     n_classes = t_loader.n_classes
-
-    trainloader = data.DataLoader(
-
-        t_loader,
-
-        batch_size=cfg["training"]["batch_size"],
-
-        num_workers=cfg["training"]["n_workers"],
-
-        shuffle=True,
-
-    )
-
-
-
-    valloader = data.DataLoader(
-
-        v_loader, batch_size=cfg["training"]["batch_size"], num_workers=cfg["training"]["n_workers"]
-
-    )
-
 
 
     # Setup Metrics
 
     running_metrics_val = runningScore(n_classes)
 
-
-
     # Setup Model
 
-    model = get_model(cfg["model"], n_classes).to(device)
-
-
+    model = get_model(cfg["model"], n_classes)
+    # model = get_model(cfg["model"], n_classes).to(device)
+    model.to(device)
 
     model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count()))
-
-
 
     # Setup optimizer, lr_scheduler and loss function
 
@@ -186,29 +122,21 @@ def train(cfg, writer, logger):
 
     optimizer_params = {k: v for k, v in cfg["training"]["optimizer"].items() if k != "name"}
 
-
-
     optimizer = optimizer_cls(model.parameters(), **optimizer_params)
 
     logger.info("Using optimizer {}".format(optimizer))
 
-
-
     scheduler = get_scheduler(optimizer, cfg["training"]["lr_schedule"])
-
-
 
     loss_fn = get_loss_function(cfg)
 
     logger.info("Using loss {}".format(loss_fn))
 
-
-
     start_iter = 0
 
     if cfg["training"]["resume"] is not None:
 
-        if os.path.isfile(cfg["training"]["resume"]):    # full directory required
+        if os.path.isfile(cfg["training"]["resume"]):  # full directory required
 
             logger.info(
 
@@ -216,9 +144,12 @@ def train(cfg, writer, logger):
 
             )
 
-            checkpoint = torch.load(cfg["training"]["resume"])    # return OrderedDict
+            checkpoint = torch.load(cfg["training"]["resume"], map_location=device)
+            # checkpoint = torch.load(cfg["training"]["resume"])    # return OrderedDict
 
             model.load_state_dict(checkpoint["model_state"])
+
+            model.to(device)
 
             optimizer.load_state_dict(checkpoint["optimizer_state"])
 
@@ -240,13 +171,9 @@ def train(cfg, writer, logger):
 
             logger.info("No checkpoint found at '{}'".format(cfg["training"]["resume"]))
 
-
-
     val_loss_meter = averageMeter()
 
     time_meter = averageMeter()
-
-
 
     best_iou = -100.0
 
@@ -254,9 +181,30 @@ def train(cfg, writer, logger):
 
     flag = True
 
-
-
     while i <= cfg["training"]["train_iters"] and flag:
+        trainloader = data.DataLoader(
+
+            t_loader,
+
+            batch_size=cfg["training"]["batch_size"],
+
+            num_workers=cfg["training"]["n_workers"],
+
+            shuffle=True,
+
+        )
+
+        valloader = data.DataLoader(
+
+            v_loader,
+
+            batch_size=cfg["training"]["batch_size"],
+
+            num_workers=cfg["training"]["n_workers"],
+
+            shuffle=True
+
+        )
 
         for (images, labels) in trainloader:
 
@@ -264,7 +212,7 @@ def train(cfg, writer, logger):
 
             start_ts = time.time()
 
-            scheduler.step()
+            # scheduler.step()   # moved to the line after optimizer.step() according to warning msg
 
             model.train()
 
@@ -272,30 +220,23 @@ def train(cfg, writer, logger):
 
             labels = labels.to(device)
 
-
-
             optimizer.zero_grad()
 
             outputs = model(images)
 
-
-
             loss = loss_fn(input=outputs, target=labels)
 
-
+            # loss = Variable(loss, requires_grad=True)  ##
 
             loss.backward()
 
             optimizer.step()
 
-
+            scheduler.step()
 
             time_meter.update(time.time() - start_ts)
 
-
-
             if (i + 1) % cfg["training"]["print_interval"] == 0:
-
                 fmt_str = "Iter [{:d}/{:d}]  Loss: {:.4f}  Time/Image: {:.4f}"
 
                 print_str = fmt_str.format(
@@ -310,8 +251,6 @@ def train(cfg, writer, logger):
 
                 )
 
-
-
                 print(print_str)
 
                 logger.info(print_str)
@@ -319,8 +258,6 @@ def train(cfg, writer, logger):
                 writer.add_scalar("loss/train_loss", loss.item(), i + 1)
 
                 time_meter.reset()
-
-
 
             if (i + 1) % cfg["training"]["val_interval"] == 0 or (i + 1) == cfg["training"][
 
@@ -333,65 +270,45 @@ def train(cfg, writer, logger):
                 with torch.no_grad():
 
                     for i_val, (images_val, labels_val) in tqdm(enumerate(valloader)):
-
                         images_val = images_val.to(device)
 
                         labels_val = labels_val.to(device)
-
-
 
                         outputs = model(images_val)
 
                         val_loss = loss_fn(input=outputs, target=labels_val)
 
-
-
                         pred = outputs.data.max(1)[1].cpu().numpy()
 
                         gt = labels_val.data.cpu().numpy()
-
-
 
                         running_metrics_val.update(gt, pred)
 
                         val_loss_meter.update(val_loss.item())
 
-
-
                 writer.add_scalar("loss/val_loss", val_loss_meter.avg, i + 1)
 
                 logger.info("Iter %d Loss: %.4f" % (i + 1, val_loss_meter.avg))
 
-
-
                 score, class_iou = running_metrics_val.get_scores()
 
                 for k, v in score.items():
-
                     print(k, v)
 
                     logger.info("{}: {}".format(k, v))
 
                     writer.add_scalar("val_metrics/{}".format(k), v, i + 1)
 
-
-
                 for k, v in class_iou.items():
-
                     logger.info("{}: {}".format(k, v))
 
                     writer.add_scalar("val_metrics/cls_{}".format(k), v, i + 1)
-
-
 
                 val_loss_meter.reset()
 
                 running_metrics_val.reset()
 
-
-
                 if score["Mean IoU : \t"] >= best_iou:
-
                     best_iou = score["Mean IoU : \t"]
 
                     state = {
@@ -418,8 +335,6 @@ def train(cfg, writer, logger):
 
                     torch.save(state, save_path)
 
-
-
             if (i + 1) == cfg["training"]["train_iters"]:
 
                 flag = False
@@ -427,11 +342,10 @@ def train(cfg, writer, logger):
                 break
 
 
-# In[ ]:
+# In[83]:
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(description="config")
 
     parser.add_argument(
@@ -442,44 +356,35 @@ if __name__ == "__main__":
 
         type=str,
 
-        default="C:/20SP/data mining/Project/config/config1.yml",
+        default="C:/Users/ysx46/PycharmProjects/untitled/DM/FCN/configuration/config1.yml",
 
         help="Configuration file to use",
 
     )
 
-
-    args = parser.parse_args(['--config',"C:/20SP/data mining/Project/config/config1.yml"])
-    #args = parser.parse_args()
-
-
+    args = parser.parse_args(['--config', "C:/Users/ysx46/PycharmProjects/untitled/DM/FCN/configuration/config1.yml"])
+    # args = parser.parse_args()
 
     with open(args.config) as fp:
-
-        cfg = yaml.load(fp)
-
-
+        cfg = yaml.load(fp, Loader=yaml.FullLoader)
+        # cfg = yaml.load(fp)
 
     run_id = random.randint(1, 100000)
 
-    logdir = os.path.join("runs", os.path.basename(args.config)[:-4], str(run_id))  #e.g. runs/config1
-    # full directory required if run in python instead of notebook
+    logdir = os.path.join("C:/Users/ysx46/PycharmProjects/untitled/DM", "runs", os.path.basename(args.config)[:-4], str(run_id))  # e.g. runs/config1
 
     writer = SummaryWriter(log_dir=logdir)
-
-
 
     print("RUNDIR: {}".format(logdir))
 
     shutil.copy(args.config, logdir)
 
-
-
     logger = get_logger(logdir)
 
     logger.info("Let the games begin")
 
-
-
     train(cfg, writer, logger)
+
+# In[74]:
+
 
