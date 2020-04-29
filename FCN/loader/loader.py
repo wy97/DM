@@ -14,7 +14,7 @@
 # In[2]:
 
 
-import imageio
+import imageio  # extra package to be installed
 
 import os
 
@@ -28,15 +28,14 @@ import torch
 
 import numpy as np
 
-import scipy.misc as m
+# import scipy.misc as m
+# replaced by imageio
 
 import scipy.io as io
 
 import matplotlib.pyplot as plt
 
 import glob
-
-
 
 from PIL import Image
 
@@ -54,23 +53,23 @@ class pascalVOCLoader(data.Dataset):
 
     def __init__(
 
-        self,
+            self,
 
-        root,
+            root,
 
-        sbd_path="C:/20SP/data mining/Project/benchmark/benchmark_RELEASE",  ## fixed under any circumstance
+            sbd_path="C:/20SP/data mining/Project/benchmark/benchmark_RELEASE",  ## fixed under any circumstance
 
-        split="train_aug", 
+            split="train",
 
-        is_transform=False,
+            is_transform=False,
 
-        img_size=512,
+            img_size=512,
 
-        augmentations=None,
+            augmentations=None,
 
-        img_norm=True,
+            img_norm=True,
 
-        test_mode=False,
+            test_mode=False,
 
     ):
 
@@ -96,8 +95,6 @@ class pascalVOCLoader(data.Dataset):
 
         self.img_size = img_size if isinstance(img_size, tuple) else (img_size, img_size)
 
-
-
         if not self.test_mode:
 
             for split in ["train", "val", "trainval"]:
@@ -112,8 +109,6 @@ class pascalVOCLoader(data.Dataset):
 
             self.setup_annotations()
 
-
-
         self.tf = transforms.Compose(
 
             [
@@ -126,13 +121,9 @@ class pascalVOCLoader(data.Dataset):
 
         )
 
-
-
     def __len__(self):
 
         return len(self.files[self.split])
-
-
 
     def __getitem__(self, index):
 
@@ -140,23 +131,22 @@ class pascalVOCLoader(data.Dataset):
 
         im_path = pjoin(self.root, "JPEGImages", im_name + ".jpg")
 
-        lbl_path = pjoin(self.root, "SegmentationClass/pre_encoded", im_name + ".png")
+        if self.split == "val":  ##
+            lbl_path = pjoin(self.root, "SegmentationClass", im_name + ".png")
+        else:
+            lbl_path = pjoin(self.root, "SegmentationClass/pre_encoded", im_name + ".png")
 
         im = Image.open(im_path)
 
         lbl = Image.open(lbl_path)
 
-        if self.augmentations is not None: 
-
+        if self.augmentations is not None:
             im, lbl = self.augmentations(im, lbl)
 
         if self.is_transform:
-
             im, lbl = self.transform(im, lbl)
 
         return im, lbl
-
-
 
     def transform(self, img, lbl):
 
@@ -177,8 +167,6 @@ class pascalVOCLoader(data.Dataset):
         lbl[lbl == 255] = 0
 
         return img, lbl
-
-
 
     def get_pascal_labels(self):
 
@@ -240,8 +228,6 @@ class pascalVOCLoader(data.Dataset):
 
         )
 
-
-
     def encode_segmap(self, mask):
 
         """Encode segmentation label images as pascal classes
@@ -265,14 +251,11 @@ class pascalVOCLoader(data.Dataset):
         label_mask = np.zeros((mask.shape[0], mask.shape[1]), dtype=np.int16)
 
         for ii, label in enumerate(self.get_pascal_labels()):
-
             label_mask[np.where(np.all(mask == label, axis=-1))[:2]] = ii
 
         label_mask = label_mask.astype(int)
 
         return label_mask
-
-
 
     def decode_segmap(self, label_mask, plot=False):
 
@@ -307,7 +290,6 @@ class pascalVOCLoader(data.Dataset):
         b = label_mask.copy()
 
         for ll in range(0, self.n_classes):
-
             r[label_mask == ll] = label_colours[ll, 0]
 
             g[label_mask == ll] = label_colours[ll, 1]
@@ -332,8 +314,6 @@ class pascalVOCLoader(data.Dataset):
 
             return rgb
 
-
-
     def setup_annotations(self):
 
         """Sets up Berkley annotations by adding image indices to the
@@ -353,19 +333,16 @@ class pascalVOCLoader(data.Dataset):
         target_path = pjoin(self.root, "SegmentationClass/pre_encoded")  ## create a new folder
 
         if not os.path.exists(target_path):
-
             os.makedirs(target_path)
 
         path = pjoin(sbd_path, "dataset/train.txt")
-        #path = pjoin(sbd_path, "VOC2012/ImageSets/Segmentation/train.txt")
+        # path = pjoin(sbd_path, "VOC2012/ImageSets/Segmentation/train.txt")
 
         sbd_train_list = tuple(open(path, "r"))
 
         sbd_train_list = [id_.rstrip() for id_ in sbd_train_list]
 
         train_aug = self.files["train"] + sbd_train_list
-
-
 
         # keep unique elements (stable)
 
@@ -377,59 +354,50 @@ class pascalVOCLoader(data.Dataset):
 
         self.files["train_aug_val"] = list(set_diff)
 
-
-
         pre_encoded = glob.glob(pjoin(target_path, "*.png"))
 
         expected = np.unique(self.files["train_aug"] + self.files["val"]).size
-
-
 
         if len(pre_encoded) != expected:
 
             print("Pre-encoding segmentation masks...")
 
             for ii in tqdm(sbd_train_list):
-
                 lbl_path = pjoin(sbd_path, "dataset/cls", ii + ".mat")
 
                 data = io.loadmat(lbl_path)
 
                 lbl = data["GTcls"][0]["Segmentation"][0].astype(np.uint8)
 
-                #lbl = (lbl*1.0 - lbl.min())*(125 - 0)/(lbl.max() - lbl.min()) + 0  ## adjust greyscale (?)
-                
-                lbl = Image.fromarray(np.uint8(lbl)).save(pjoin(target_path, ii + ".png"))
-                #lbl = m.toimage(lbl, high=lbl.max(), low=lbl.min())
+                # lbl = (lbl*1.0 - lbl.min())*(125 - 0)/(lbl.max() - lbl.min())   ## adjust greyscale (?)
 
-                #m.imsave(pjoin(target_path, ii + ".png"), lbl)
+                lbl = Image.fromarray(np.uint8(lbl))
+                # lbl = m.toimage(lbl, high=lbl.max(), low=lbl.min())
 
-
+                imageio.imwrite(pjoin(target_path, ii + ".png"), lbl)
+                # m.imsave(pjoin(target_path, ii + ".png"), lbl)
 
             for ii in tqdm(self.files["trainval"]):
-
                 fname = ii + ".png"
 
                 lbl_path = pjoin(self.root, "SegmentationClass", fname)
 
                 lbl = self.encode_segmap(imageio.imread(lbl_path))
-                #lbl = self.encode_segmap(m.imread(lbl_path))
+                # lbl = self.encode_segmap(m.imread(lbl_path))
 
-                lbl = Image.fromarray(lbl).save(pjoin(target_path, fname))
+                # lbl = Image.fromarray(np.uint8(lbl)).save(pjoin(target_path, fname))
 
-                #m.imsave(pjoin(target_path, fname), lbl)
-
-
+                imageio.imwrite(pjoin(target_path, fname), lbl)
+                # m.imsave(pjoin(target_path, fname), lbl)
 
         assert expected == 9733, "unexpected dataset sizes"
-
 
 # In[4]:
 
 
 # Leave code for debugging purposes
 
-# import ptsemseg.augmentations as aug
+# import DM.FCN.augmentation.aug as aug
 
 # if __name__ == '__main__':
 
