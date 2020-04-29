@@ -1,0 +1,25 @@
+model:
+    arch: fcn8s
+data:
+    dataset: pascal
+    train_split: train_aug
+    val_split: val
+    img_rows: 'same'
+    img_cols: 'same'
+    path: /content/drive/My Drive/ColabNotebooks/VOC2012/VOCtrainval_11-May-2012
+    sbd_path: /content/drive/My Drive/ColabNotebooks/benchmark/benchmark_RELEASE
+training:
+    train_iters: 50000
+    batch_size: 1
+    val_interval: 500
+    n_workers: 4
+    print_interval: 100
+    optimizer:
+        name: 'adadelta'
+        lr: 1.0e-4
+        weight_decay: 0.0005
+    loss:
+        name: 'cross_entropy'
+        size_average: False
+    lr_schedule:
+    resume: fcn8s_adadelta_4_no_model.pkl
